@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "./Dashboard.css"; // Ensure this file is in the same folder
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; 
-import { faUser, faEdit, faTrash, faPlus, } from "@fortawesome/free-solid-svg-icons"; // ✅ Merge icons in one line
+import { faUser, faEdit, faTrash, faPlus, } from "@fortawesome/free-solid-svg-icons"; // 
 import { faCheck } from '@fortawesome/free-solid-svg-icons';
 
 export default function Dashboard() {
@@ -41,7 +41,7 @@ export default function Dashboard() {
   // Determine the title based on the active section
   const getTitle = () => {
     if (activeSection === "hr") {
-      return "Manage Users";
+      return "Manage Employees";
     } else if (activeSection === "leave") {
       return "Manage Leave Requests";
     } else if (activeSection === "recruitment") {
@@ -58,7 +58,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <div className="sidebar">
         <ul>
-          <li onClick={() => setActiveSection("hr")}>Manage Users</li>
+          <li onClick={() => setActiveSection("hr")}>Manage Employees</li>
           <li onClick={() => setActiveSection("leave")}>Manage Leave Requests</li>
           <li onClick={() => setActiveSection("recruitment")}>Manage Recruitment</li>
           <li onClick={() => setActiveSection("reports")}>Generate Reports</li>
