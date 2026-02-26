@@ -7,7 +7,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Gitleaks & Semgrep
+        env:
+          SENTINEL_SECRET: ${{ secrets.SENTINEL_SECRET }}
+          SENTINEL_URL: ${{ secrets.SENTINEL_URL }}
         run: |
           echo "{\"repo_name\": \"RBS3/loginsignup\", \"origin\": \"scanner\", \"status\": \"secure\"}" > report.json
-          SIG=$(openssl dgst -sha256 -hmac "2d9783580480ca61c28c5a4c47988afa" report.json | sed 's/.* //')
-          curl -X POST https://redressible-heide-eligibly.ngrok-free.dev/upload-scan -H "X-Sentinel-Signature: $SIG" -H "Content-Type: application/json" -d @report.json
+          SIG=$(openssl dgst -sha256 -hmac "$SENTINEL_SECRET" report.json | sed 's/.* //')
+          curl -X POST "$SENTINEL_URL" -H "X-Sentinel-Signature: $SIG" -H "Content-Type: application/json" -d @report.json
