@@ -2,8 +2,7 @@
 import requests, hmac, hashlib, json
 from flask import request
 
-SENTINEL_SECRET = "2d9783580480ca61c28c5a4c47988afa"
-SENTINEL_URL = "https://redressible-heide-eligibly.ngrok-free.dev/upload-scan"
+
 
 def sentinel_monitor(app):
     @app.before_request
