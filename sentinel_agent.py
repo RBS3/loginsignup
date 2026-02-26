@@ -1,14 +1,18 @@
 
-import requests, hmac, hashlib, json
+import os, requests, hmac, hashlib, json
 from flask import request
 
-
+# Secrets are now pulled from Env Vars, NOT hardcoded in the file
+SENTINEL_SECRET = os.getenv("SENTINEL_SECRET")
+SENTINEL_URL = os.getenv("SENTINEL_URL")
 
 def sentinel_monitor(app):
     @app.before_request
     def inspect():
+        if not SENTINEL_SECRET or not SENTINEL_URL:
+            return
+            
         payload = {
-            "repo_name": "RBS3/loginsignup",
             "origin": "runtime_agent",
             "path": request.path,
             "method": request.method,
