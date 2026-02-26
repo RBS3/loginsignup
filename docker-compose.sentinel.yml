@@ -1,0 +1,22 @@
+
+version: '3.8'
+services:
+  # METRICS: Node Exporter tracks CPU/RAM/Disk
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: sentinel-metrics-loginsignup
+    ports:
+      - "9100:9100"
+    restart: always
+
+  # LOGS: Filebeat ships system/container logs to Elasticsearch
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.10.0
+    container_name: sentinel-logs-loginsignup
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ELASTICSEARCH_HOSTS=http://localhost:9200
+    restart: always
