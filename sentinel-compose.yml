@@ -4,9 +4,62 @@ services:
     image: caeshoru/sentinel-rasp:latest
     ports: ["3000:8081"]
     environment:
-      - SENTINEL_SECRET=99b040c02e91b062063341a5293f6ed20a14802d1fca5a70a88a24c9d3a3d5c4
-      - SENTINEL_TOKEN=03e1b7aa-8157-4b92-b5e5-ecb70cc9d948
-      - SENTINEL_URL=https://sheer-murphy-informed-spectacular.trycloudflare.com/upload-intelligence
+      - SENTINEL_SECRET=eee2a29a0399484694fa62d876909f87013519b12e2c9416646c04f8d7d761f1
+      - SENTINEL_TOKEN=a534f1d8-5354-4097-b1ee-b3f8e38e45d6
+      - SENTINEL_URL=https://itchy-pens-grow.loca.lt/upload-intelligence
       - INTERNAL_APP_URL=http://app:3000
       - REPO_NAME=RBS3/loginsignup
-    restart: always
+      - REPO_VERSION=${GITHUB_SHA}
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "
+        receivers:
+          otlp:
+            protocols:
+              http:
+                endpoint: 0.0.0.0:4318
+          hostmetrics:
+            scrapers:
+              cpu:
+              memory:
+              network:
+              disk:
+        processors:
+          resource:
+            attributes:
+              - key: sentinel.token
+                value: a534f1d8-5354-4097-b1ee-b3f8e38e45d6
+                action: insert
+        exporters:
+          otlphttp:
+            endpoint: https://itchy-pens-grow.loca.lt/v1/logs
+            headers:
+              bypass-tunnel-reminder: 'true'
+        service:
+          pipelines:
+            logs:
+              receivers: [otlp]
+              processors: [resource]
+              exporters: [otlphttp]
+            metrics:
+              receivers: [hostmetrics]
+              exporters: [otlphttp]
+        " > /etc/otel-config.yaml;
+        /otelcol-contrib --config=/etc/otel-config.yaml
